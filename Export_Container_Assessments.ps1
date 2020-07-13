@@ -22,9 +22,13 @@ $authHeader = @{
 	
 $url = "https://management.azure.com/subscriptions/$($subscription)/providers/Microsoft.Security/subAssessments?api-version=2019-01-01-preview"
 
-$results = (Invoke-RestMethod -Method "Get" -Uri $url -Headers $authHeader ).value
+
+$values = (Invoke-RestMethod -Method "Get" -Uri $url -Headers $authHeader )
+$results = $values.value
+$NextLink = $values.nextLink
 
 foreach ($result in $results){
+#$decription = $result.properties.Description
 $id = $result.properties.id
 $severity = $result.properties.status.severity
 $remediation = $result.properties.remediation
@@ -36,7 +40,31 @@ $repositoryName = $result.properties.additionalData.repositoryName
 $type = $result.properties.additionalData.type
 [pscustomobject]@{ id = $id; severity =  $severity; remediation = $remediation; displayName = $displayName; impact = $impact; category = $category; imageDigest = $imageDigest; repositoryName = $repositoryName; type = $type } | Export-Csv $filename -Append -NoTypeInformation
 }
+
+
+While ($NextLink -ne $Null){
+    $values = (Invoke-RestMethod -Method "Get" -Uri $NextLink -Headers $authHeader )
+	$results = $values.value
+	$NextLink = $values.nextLink
+	
+	foreach ($result in $results){
+		#$decription = $result.properties.Description
+		$id = $result.properties.id
+		$severity = $result.properties.status.severity
+		$remediation = $result.properties.remediation
+		$displayName = $result.properties.displayName
+		$impact = $result.properties.impact
+		$category = $result.properties.category
+		$imageDigest = $result.properties.additionalData.imageDigest
+		$repositoryName = $result.properties.additionalData.repositoryName
+		$type = $result.properties.additionalData.type
+		[pscustomobject]@{ id = $id; severity =  $severity; remediation = $remediation; displayName = $displayName; impact = $impact; category = $category; imageDigest = $imageDigest; repositoryName = $repositoryName; type = $type } | Export-Csv $filename -Append -NoTypeInformation
+}
+	}
+
+
 echo "Done"
+
 }
 
 Export-Container-Assessments $Subscription $FileName
